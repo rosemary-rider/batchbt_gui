@@ -1,22 +1,29 @@
-import React, {useRef, useMemo, memo} from 'react';
-import {API_URL} from './api'
+import React, { useRef, useMemo, useState } from 'react';
+import { API_URL } from './api'
 import useFetch from 'use-http'
 import { Person } from "./types/person"
-import { ColDef } from 'ag-grid-community';
-import {AgGridReact } from 'ag-grid-react';
+import { ColDef, ICellRendererParams } from 'ag-grid-community';
+import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-alpine.css';
 
+interface AgeCellProps {
+  count: number;
+  setCount: React.Dispatch<React.SetStateAction<number>>;
+}
+
 export function Persons() {
   const gridRef = useRef<AgGridReact>(null);
+  const [count, setCount] = useState(0)
   const { loading, error, data = [] } = useFetch<Person[]>(`${API_URL}/persons`, []);
+  const cellProps = useMemo<AgeCellProps>(() => ({ count, setCount }), [count])
   const columnDefs = useMemo<ColDef[]>(
     () => [
-      { field: 'firstName'},
-      { field: 'lastName'},
-      { field: 'age', cellRendererFramework: AgeCell, autoHeight: true }
+      { field: 'firstName' },
+      { field: 'lastName' },
+      { field: 'age', cellRendererFramework: AgeCell, autoHeight: true, cellRendererParams: cellProps }
     ],
-    []
+    [cellProps]
   );
   const defaultColDef = useMemo(
     () => ({
@@ -32,26 +39,34 @@ export function Persons() {
     return <div>Loading...</div>;
   // use ag-grid reactui: https://www.ag-grid.com/react-data-grid/reactui/
   return (
-    <AgGridReact
-      // turn on AG Grid React UI
-      reactUi={true}
-      // used to access grid API
-      ref={gridRef}
-      // all other properties as normal...
-      className="ag-theme-alpine"
-      animateRows={true}
-      columnDefs={columnDefs}
-      defaultColDef={defaultColDef}
-      rowData={data}
-    />
+    <>
+      <div className="input-group mb-3">
+        <div className="input-group-prepend">
+          <span className="input-group-text">Count</span>
+        </div>
+        <input type="number" className="form-control" value={count} readOnly />
+      </div>
+      <AgGridReact
+        // turn on AG Grid React UI
+        reactUi={true}
+        // used to access grid API
+        ref={gridRef}
+        // all other properties as normal...
+        className="ag-theme-alpine"
+        animateRows={true}
+        columnDefs={columnDefs}
+        defaultColDef={defaultColDef}
+        rowData={data}
+      />
+    </>
   );
 }
 
-const AgeCell = memo<any>( (params: { value: number}) => {
-    return (
-          <div className="d-flex flex-column h-100">
-              {params.value} 
-              <button className="btn btn-primary my-2">hello</button>
-          </div>
-    );
-});
+const AgeCell = ({ value, count, setCount }: ICellRendererParams & AgeCellProps) => {
+  return (
+    <div className="d-flex flex-column">
+      {value}
+      <button className="btn btn-primary my-2" onClick={() => setCount(count + 1)}>hello</button>
+    </div>
+  );
+}
