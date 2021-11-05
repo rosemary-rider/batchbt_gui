@@ -1,18 +1,19 @@
 import React, { useRef, useMemo, useState, useCallback, useEffect } from 'react';
-import { API_URL } from './api'
-import useFetch from 'use-http'
-import { Person } from "./types/person"
 import { ColDef, GridOptions, SelectionChangedEvent, HeaderCheckboxSelectionCallbackParams, GridReadyEvent } from 'ag-grid-community';
 import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-alpine.css';
+import useFetch from 'use-http'
+import { API_URL } from './api'
+import { JobDto } from "./dto/job"
 import { AgGridReact } from 'ag-grid-react/lib/agGridReact';
 import { GridHeader } from './GridHeader'
+import { KillButton } from './KillButton'
 
-function isFirstColumn(params: HeaderCheckboxSelectionCallbackParams) {
-  var displayedColumns = params.columnApi.getAllDisplayedColumns();
-  var thisIsFirstColumn = displayedColumns[0] === params.column;
-  return thisIsFirstColumn;
-}
+const jobFields: Array<keyof JobDto> = ['jobKey', 'jobName'];
+
+const colDef: ColDef[] = jobFields.map(key => ({
+  field: key
+}))
 
 const defaultColDef: ColDef = {
   flex: 1,
@@ -24,20 +25,18 @@ const defaultColDef: ColDef = {
   headerCheckboxSelectionFilteredOnly: true
 }
 
+function isFirstColumn({ columnApi, column }: HeaderCheckboxSelectionCallbackParams) {
+  const displayedColumns = columnApi.getAllDisplayedColumns();
+  return displayedColumns[0] === column;
+}
+
 export const Jobs: React.FC = () => {
   const [filter, setFilter] = useState('')
   const gridRef = useRef<AgGridReact>(null);
   const [rowCount, setRowCount] = useState(0)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
-  const { loading, error, data = [] } = useFetch<Person[]>(`${API_URL}/persons`, []);
-  const colDef = useMemo<ColDef[]>(
-    () => [
-      { field: 'firstName' },
-      { field: 'lastName' },
-      { field: 'age' }
-    ],
-    []
-  );
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+  const { loading, error, data = [] } = useFetch<JobDto[]>(`${API_URL}/jobs`, []);
   const onGridReady = useCallback((event: GridReadyEvent) => {
     if (!gridRef.current) return;
     const { api } = gridRef.current
@@ -46,9 +45,9 @@ export const Jobs: React.FC = () => {
   const onSelectionChanged = useCallback((event: SelectionChangedEvent) => {
     if (!gridRef.current) return;
     const { api } = gridRef.current
-    const selectedRows = api.getSelectedRows()
-    console.log(selectedRows)
-    setSelectedRowCount(selectedRows.length)
+    const selectedRows = api.getSelectedRows();
+    setSelectedRowCount(selectedRows.length);
+    setSelectedKeys(selectedRows.map(({ jobKey }) => jobKey));
   }, []);
   const gridOptions = useMemo<GridOptions>(
     () => ({
@@ -63,7 +62,7 @@ export const Jobs: React.FC = () => {
     const { current: grid } = gridRef;
     if (!grid) return;
     const { api } = grid
-    api.setQuickFilter(filter)
+    api.setQuickFilter(filter);
   }, [filter])
   if (error)
     return <div>Error</div>;
@@ -71,6 +70,13 @@ export const Jobs: React.FC = () => {
     return <div>Loading...</div>;
   return (
     <div className="d-flex flex-column h-100">
+      <div className="d-flex justify-content-end">
+        <div className="btn-group">
+          <KillButton jobKeys={selectedKeys} />
+          <button className="btn btn-outline-primary">Resume</button>
+          <button className="btn btn-outline-primary">Delete</button>
+        </div>
+      </div>
       <div className="mb-3">
         <GridHeader filter={filter} setFilter={setFilter} rowCount={rowCount} selectedRowCount={selectedRowCount} />
       </div>

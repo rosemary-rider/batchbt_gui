@@ -5,12 +5,12 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
-export interface Person {
-  firstName: string;
-  lastName: string;
+export interface JobDto {
+  jobKey: string;
+  jobName: string;
   /**
-   * Age in years
+   * Last jobId
    */
-  age?: number;
-  hairColor?: "black" | "brown" | "blue";
+  jobId?: string;
+  jobStatus?: "SUBMITTED" | "STARTING" | "RUNNING" | "FAILED" | "SUCCEEDED";
 }
