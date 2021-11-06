@@ -2,7 +2,7 @@ import React, { useRef, useMemo, useState, useCallback, useEffect } from 'react'
 import { ColDef, GridOptions, SelectionChangedEvent, HeaderCheckboxSelectionCallbackParams, GridReadyEvent } from 'ag-grid-community';
 import 'ag-grid-community/dist/styles/ag-grid.css';
 import 'ag-grid-community/dist/styles/ag-theme-alpine.css';
-import useFetch from 'use-http'
+import useFetch, { CachePolicies } from 'use-http'
 import { API_URL } from './api'
 import { JobDto } from "./dto/job"
 import { AgGridReact } from 'ag-grid-react/lib/agGridReact';
@@ -12,7 +12,7 @@ import { KillButton } from './KillButton'
 const jobFields: Array<keyof JobDto> = ['jobKey', 'jobName'];
 
 const colDef: ColDef[] = jobFields.map(key => ({
-  field: key
+  field: key as string
 }))
 
 const defaultColDef: ColDef = {
@@ -36,7 +36,7 @@ export const Jobs: React.FC = () => {
   const [rowCount, setRowCount] = useState(0)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
-  const { loading, error, data = [] } = useFetch<JobDto[]>(`${API_URL}/jobs`, []);
+  const { loading, error, data = [] } = useFetch<JobDto[]>(`${API_URL}/jobs`, { cachePolicy: CachePolicies.NO_CACHE }, []);
   const onGridReady = useCallback((event: GridReadyEvent) => {
     if (!gridRef.current) return;
     const { api } = gridRef.current
@@ -72,7 +72,11 @@ export const Jobs: React.FC = () => {
     <div className="d-flex flex-column h-100">
       <div className="d-flex justify-content-end">
         <div className="btn-group">
-          <KillButton jobKeys={selectedKeys} />
+          <KillButton jobKeys={selectedKeys} onClick={() => {
+            if (!gridRef.current) return;
+            const { api } = gridRef.current;
+            api.deselectAll();
+          }} />
           <button className="btn btn-outline-primary">Resume</button>
           <button className="btn btn-outline-primary">Delete</button>
         </div>
